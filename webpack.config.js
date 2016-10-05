@@ -2,6 +2,7 @@ var path = require('path');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var Autoprefixer = require('autoprefixer');
 var merge = require('webpack-merge');
+var webpack = require('webpack');
 
 module.exports = function(env) {
   var cwd = process.cwd();
@@ -16,6 +17,12 @@ module.exports = function(env) {
       return merge(
         commonConfig(stylePaths),
         developmentConfig(stylePaths)
+      );
+    case 'interactive':
+      return merge(
+        commonConfig(stylePaths),
+        buildConfig(stylePaths),
+        interactiveConfig()
       );
     case 'build':
       return merge(
@@ -74,6 +81,35 @@ function commonConfig(stylePaths) {
     },
     postcss: function() {
       return [ Autoprefixer ];
+    }
+  };
+}
+
+function interactiveConfig() {
+  return {
+    resolve: {
+      alias: {
+        react: 'preact-compat',
+        'react-dom': 'preact-compat'
+      }
+    },
+    plugins: [
+      new webpack.optimize.UglifyJsPlugin({
+        compress: {
+          warnings: false
+        }
+      })
+    ],
+    // Patch webpack module resolution (this bit probably needs to go to antwar core)
+    resolve: {
+      modulesDirectories: [
+        path.join(__dirname, 'node_modules')
+      ]
+    },
+    resolveLoader: {
+      modulesDirectories: [
+        path.join(__dirname, 'node_modules')
+      ]
     }
   };
 }
