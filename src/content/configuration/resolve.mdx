@@ -175,6 +175,23 @@ module.exports = {
 
 If unsafe cache is enabled, includes `request.context` in the cache key. This option is taken into account by the [`enhanced-resolve`](https://github.com/webpack/enhanced-resolve/) module. Since webpack 3.1.0 context in resolve caching is ignored when resolve or resolveLoader plugins are provided. This addresses a performance regression.
 
+### resolve.conditionNames
+
+`string[]`
+
+Condition names for [`exports` field](https://nodejs.org/api/packages.html#packages_exports) which defines entry points of a package.
+
+**webpack.config.js**
+
+```js
+module.exports = {
+  //...
+  resolve: {
+    conditionNames: ['require', 'node'],
+  },
+};
+```
+
 ### `resolve.descriptionFiles`
 
 `[string] = ['package.json']`
@@ -258,6 +275,59 @@ module.exports = {
   //...
   resolve: {
     extensions: ['.ts', '...'],
+  },
+};
+```
+
+### resolve.fallback
+
+Redirect module requests when normal resolving fails.
+
+**webpack.config.js**
+
+```js
+module.exports = {
+  //...
+  resolve: {
+    fallback: {
+      abc: false, // do not include a polyfill for abc
+      xyz: path.resolve(__dirname, 'path/to/file.js'), // include a polyfill for xyz
+    },
+  },
+};
+```
+
+Webpack 5 no longer polyfills Node.js core modules automatically which means if you use them in your code running in browsers or alike, you will have to install compatible modules from npm and include them yourself. Here is a list of polyfills webpack has used before webpack 5:
+
+```js
+module.exports = {
+  //...
+  resolve: {
+    fallback: {
+      assert: require.resolve('assert'),
+      buffer: require.resolve('buffer'),
+      console: require.resolve('console-browserify'),
+      constants: require.resolve('constants-browserify'),
+      crypto: require.resolve('crypto-browserify'),
+      domain: require.resolve('domain-browser'),
+      events: require.resolve('events'),
+      http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
+      os: require.resolve('os-browserify/browser'),
+      path: require.resolve('path-browserify'),
+      punycode: require.resolve('punycode'),
+      process: require.resolve('process/browser'),
+      querystring: require.resolve('querystring-es3'),
+      stream: require.resolve('stream-browserify'),
+      string_decoder: require.resolve('string_decoder'),
+      sys: require.resolve('util'),
+      timers: require.resolve('timers-browserify'),
+      tty: require.resolve('tty-browserify'),
+      url: require.resolve('url'),
+      util: require.resolve('util'),
+      vm: require.resolve('vm-browserify'),
+      zlib: require.resolve('browserify-zlib'),
+    },
   },
 };
 ```
@@ -565,25 +635,6 @@ module.exports = {
 };
 ```
 
-### `resolve.fallback`
-
-`boolean`
-
-Redirect module requests when normal resolving fails.
-
-**webpack.config.js**
-
-```js
-module.exports = {
-  //...
-  resolve: {
-    fallback: {
-      xyz: path.resolve(__dirname, 'path/to/file.js'),
-    },
-  },
-};
-```
-
 ### resolve.byDependency
 
 Configure resolve options by the type of module request.
@@ -637,7 +688,7 @@ T> Note that you can use alias here and other features familiar from resolve. Fo
 
 W> Removed in webpack 5
 
-The extensions/suffixes that are used when resolving loaders. Since version two, we [strongly recommend](/migrate/3/#automatic--loader-module-name-extension-removed) using the full name, e.g. `example-loader`, as much as possible for clarity. However, if you really wanted to exclude the `-loader` bit, i.e. just use `example`, you can use this option to do so:
+The extensions/suffixes that are used when resolving loaders. Since version two, we [strongly recommend](/migrate/3/#automatic--loader-module-name-extension-removed) using the full name, e.g. `example-loader`, as much as possible for clarity. However, if you really wanted to exclude the `-loader` bit, i.e. to only use `example`, you can use this option to do so:
 
 **webpack.config.js**
 

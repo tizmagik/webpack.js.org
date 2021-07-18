@@ -31,7 +31,13 @@ contributors:
 
 The top-level `output` key contains set of options instructing webpack on how and where it should output your bundles, assets and anything else you bundle or load with webpack.
 
-## `output.auxiliaryComment`
+## output.assetModuleFilename
+
+`string = '[hash][ext][query]'`
+
+The same as [`output.filename`](#outputfilename) but for [Asset Modules](/guides/asset-modules/).
+
+## output.auxiliaryComment
 
 W> Prefer to use [`output.library.auxiliaryComment`](#outputlibraryauxiliarycomment) instead.
 
@@ -139,6 +145,24 @@ module.exports = {
 };
 ```
 
+## output.chunkFormat
+
+`false` `string: 'array-push' | 'commonjs' | 'module' | <any string>`
+
+The format of chunks (formats included by default are `'array-push'` (web/WebWorker), `'commonjs'` (node.js), `'module'` (ESM), but others might be added by plugins).
+
+**webpack.config.js**
+
+```javascript
+module.exports = {
+  //...
+  output: {
+    //...
+    chunkFormat: 'commonjs',
+  },
+};
+```
+
 ## `output.chunkLoadTimeout`
 
 `number = 120000`
@@ -175,11 +199,11 @@ module.exports = {
 };
 ```
 
-## `output.chunkLoading`
+## output.chunkLoading
 
-`false` `string: 'jsonp' | 'import-scripts' | 'require' | 'async-node' | <any string>`
+`false` `string: 'jsonp' | 'import-scripts' | 'require' | 'async-node' | 'import' | <any string>`
 
-The method to load chunks (methods included by default are 'jsonp' (web), 'importScripts' (WebWorker), 'require' (sync node.js), 'async-node' (async node.js), but others might be added by plugins).
+The method to load chunks (methods included by default are `'jsonp'` (web), `'import'` (ESM), `'importScripts'` (WebWorker), `'require'` (sync node.js), `'async-node'` (async node.js), but others might be added by plugins).
 
 **webpack.config.js**
 
@@ -193,23 +217,83 @@ module.exports = {
 };
 ```
 
-## `output.chunkFormat`
+## output.clean
 
-`false` `string: 'array-push' | 'commonjs' | <any string>`
+<Badge text="5.20.0+" />
 
-The format of chunks (formats included by default are 'array-push' (web/WebWorker), 'commonjs' (node.js), but others might be added by plugins).
-
-**webpack.config.js**
+`boolean` `{ dry?: boolean, keep?: RegExp | string | ((filename: string) => boolean) }`
 
 ```javascript
 module.exports = {
   //...
   output: {
-    //...
-    chunkFormat: 'commonjs',
+    clean: true, // Clean the output directory before emit.
   },
 };
 ```
+
+```javascript
+module.exports = {
+  //...
+  output: {
+    clean: {
+      dry: true, // Log the assets that should be removed instead of deleting them.
+    },
+  },
+};
+```
+
+```javascript
+module.exports = {
+  //...
+  output: {
+    clean: {
+      keep: /ignored\/dir\//, // Keep these assets under 'ignored/dir'.
+    },
+  },
+};
+
+// or
+
+module.exports = {
+  //...
+  output: {
+    clean: {
+      keep(asset) {
+        return asset.includes('ignored/dir');
+      },
+    },
+  },
+};
+```
+
+You can also use it with hook:
+
+```javascript
+webpack.CleanPlugin.getCompilationHooks(compilation).keep.tap(
+  'Test',
+  (asset) => {
+    if (/ignored\/dir\//.test(asset)) return true;
+  }
+);
+```
+
+## output.crossOriginLoading
+
+`boolean = false` `string: 'anonymous' | 'use-credentials'`
+
+Tells webpack to enable [cross-origin](https://developer.mozilla.org/en/docs/Web/HTML/Element/script#attr-crossorigin) loading of chunks. Only takes effect when [`target`](/configuration/target/) is set to `'web'`, which uses JSONP for loading on-demand chunks, by adding script tags.
+
+- `'anonymous'` - Enable cross-origin loading **without credentials**
+- `'use-credentials'` - Enable cross-origin loading **with credentials**
+
+## `output.devtoolFallbackModuleFilenameTemplate`
+
+`string` `function (info)`
+
+A fallback used when the template string or function above yields duplicates.
+
+See [`output.devtoolModuleFilenameTemplate`](#outputdevtoolmodulefilenametemplate).
 
 ## `output.enabledChunkLoadingTypes`
 
@@ -228,23 +312,6 @@ module.exports = {
   },
 };
 ```
-
-## `output.crossOriginLoading`
-
-`boolean = false` `string: 'anonymous' | 'use-credentials'`
-
-Tells webpack to enable [cross-origin](https://developer.mozilla.org/en/docs/Web/HTML/Element/script#attr-crossorigin) loading of chunks. Only takes effect when [`target`](/configuration/target/) is set to `'web'`, which uses JSONP for loading on-demand chunks, by adding script tags.
-
-- `'anonymous'` - Enable cross-origin loading **without credentials**
-- `'use-credentials'` - Enable cross-origin loading **with credentials**
-
-## `output.devtoolFallbackModuleFilenameTemplate`
-
-`string` `function (info)`
-
-A fallback used when the template string or function above yields duplicates.
-
-See [`output.devtoolModuleFilenameTemplate`](#outputdevtoolmodulefilenametemplate).
 
 ## `output.devtoolModuleFilenameTemplate`
 
@@ -390,7 +457,7 @@ module.exports = {
 };
 ```
 
-Make sure to read the [Caching guide](/guides/caching) for details. There are more steps involved than just setting this option.
+Make sure to read the [Caching guide](/guides/caching) for details. There are more steps involved than only setting this option.
 
 Note this option is called filename but you are still allowed to use something like `'js/[name]/bundle.js'` to create a folder structure.
 
@@ -487,12 +554,6 @@ type ModulePathData = {
 ```
 
 T> In some context properties will use JavaScript code expressions instead of raw values. In these cases the `WithLength` variant is available and should be used instead of slicing the original value.
-
-## `output.assetModuleFilename`
-
-`string = '[hash][ext][query]'`
-
-The same as [`output.filename`](#outputfilename) but for [Asset Modules](/guides/asset-modules/)
 
 ## `output.globalObject`
 
@@ -615,7 +676,7 @@ Output a library exposing the exports of your entry point.
 
 - Type: `string | string[] | object`
 
-Let's take a look at a simple example.
+Let's take a look at an example.
 
 **webpack.config.js**
 
@@ -814,7 +875,7 @@ Similar to [`type: 'assign'`](#type-assign) but a safer option as it will reuse 
 // only create MyLibrary if it doesn't exist
 MyLibrary = typeof MyLibrary === 'undefined' ? {} : MyLibrary;
 // then copy the return value to MyLibrary
-// just like what Object.assign does
+// similarly to what Object.assign does
 
 // for instance, you export a `hello` function in your entry as follow
 export function hello(name) {
@@ -979,7 +1040,7 @@ This will expose your library as an AMD module.
 
 AMD modules require that the entry chunk (e.g. the first script loaded by the `<script>` tag) be defined with specific properties, such as `define` and `require` which is typically provided by RequireJS or any compatible loaders (such as almond). Otherwise, loading the resulting AMD bundle directly will result in an error like `define is not defined`.
 
-So, with the following configuration...
+With the following configuration...
 
 ```javascript
 module.exports = {
@@ -1305,9 +1366,11 @@ When using `output.library.type: "umd"`, setting `output.library.umdNamedDefine`
 module.exports = {
   //...
   output: {
-    name: 'MyLibrary',
-    type: 'umd',
-    umdNamedDefine: true,
+    library: {
+      name: 'MyLibrary',
+      type: 'umd',
+      umdNamedDefine: true,
+    },
   },
 };
 ```
@@ -1404,7 +1467,7 @@ Copy the return value to a target object if it exists, otherwise create the targ
 // create the target object if it doesn't exist
 MyLibrary = typeof MyLibrary === 'undefined' ? {} : MyLibrary;
 // then copy the return value to MyLibrary
-// just like what Object.assign does
+// similarly to what Object.assign does
 
 // for instance, you export a `hello` function in your entry as follow
 export function hello(name) {
@@ -1520,7 +1583,7 @@ This will expose your library as an AMD module.
 
 AMD modules require that the entry chunk (e.g. the first script loaded by the `<script>` tag) be defined with specific properties, such as `define` and `require` which is typically provided by RequireJS or any compatible loaders (such as almond). Otherwise, loading the resulting AMD bundle directly will result in an error like `define is not defined`.
 
-So, with the following configuration...
+With the following configuration...
 
 ```javascript
 module.exports = {
@@ -1773,7 +1836,12 @@ T> It also adds some info about tree shaking to the generated bundle.
 
 ## `output.publicPath`
 
-`string` `function`
+- Type:
+
+  - `function`
+  - `string`
+
+    `output.publicPath` defaults to `'auto'` with `web` and `web-worker` targets, see [this guide](/guides/public-path/#automatic-publicpath) for its use cases.
 
 This is an important option when using on-demand-loading or loading external resources like images, files, etc. If an incorrect value is specified you'll receive 404 errors while loading these resources.
 
@@ -1781,7 +1849,7 @@ This option specifies the **public URL** of the output directory when referenced
 
 The value of the option is prefixed to every URL created by the runtime or loaders. Because of this **the value of this option ends with `/`** in most cases.
 
-Simple rule: The URL of your [`output.path`](#outputpath) from the view of the HTML page.
+A rule to consider: The URL of your [`output.path`](#outputpath) from the view of the HTML page.
 
 **webpack.config.js**
 
@@ -1856,8 +1924,6 @@ __webpack_public_path__ = myRuntimePublicPath;
 ```
 
 See [this discussion](https://github.com/webpack/webpack/issues/2776#issuecomment-233208623) for more information on `__webpack_public_path__`.
-
-T> `output.publicPath` defaults to `'auto'` with `web` and `web-worker` targets.
 
 ## output.scriptType
 
@@ -1954,6 +2020,34 @@ Instead, with `strictModuleExceptionHandling` set to `true`, all `require`s of t
 // with strictModuleExceptionHandling = true
 require('module'); // <- throws
 require('module'); // <- also throws
+```
+
+## `output.trustedTypes`
+
+`boolean = false` `string` `object`
+
+<Badge text="5.37.0+" />
+
+Controls [Trusted Types](https://web.dev/trusted-types) compatibility. When enabled, webpack will detect Trusted Types support and, if they are supported, use Trusted Types policies to create script URLs it loads dynamically. Use when the application runs under a [`require-trusted-types-for`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/require-trusted-types-for) Content Security Policy directive.
+
+It defaults to `false` (no compatibility, script URLs are strings).
+
+- When set to `true`, webpack will use [`output.uniqueName`](#outputuniquename) as the Trusted Types policy name.
+- When set to a non-empty string, its value will be used as a policy name.
+- When set to an object, the policy name is taken from the object's `policyName` property.
+
+**webpack.config.js**
+
+```javascript
+module.exports = {
+  //...
+  output: {
+    //...
+    trustedTypes: {
+      policyName: 'my-application#webpack',
+    },
+  },
+};
 ```
 
 ## `output.umdNamedDefine`
@@ -2141,64 +2235,3 @@ module.exports = {
 ```
 
 W> `output.module` is an experimental feature and can only be enabled by setting [`experiments.outputModule`](/configuration/experiments/#experiments) to `true`.
-
-## output.clean
-
-<Badge text="5.20.0+" />
-
-`boolean` `{ dry?: boolean, keep?: RegExp | string | ((filename: string) => boolean) }`
-
-```javascript
-module.exports = {
-  //...
-  output: {
-    clean: true, // Clean the output directory before emit.
-  },
-};
-```
-
-```javascript
-module.exports = {
-  //...
-  output: {
-    clean: {
-      dry: true, // Log the assets that should be removed instead of deleting them.
-    },
-  },
-};
-```
-
-```javascript
-module.exports = {
-  //...
-  output: {
-    clean: {
-      keep: /ignored\/dir\//, // Keep these assets under 'ignored/dir'.
-    },
-  },
-};
-
-// or
-
-module.exports = {
-  //...
-  output: {
-    clean: {
-      keep(asset) {
-        return asset.includes('ignored/dir');
-      },
-    },
-  },
-};
-```
-
-You can also use it with hook:
-
-```javascript
-webpack.CleanPlugin.getCompilationHooks(compilation).keep.tap(
-  'Test',
-  (asset) => {
-    if (/ignored\/dir\//.test(asset)) return true;
-  }
-);
-```

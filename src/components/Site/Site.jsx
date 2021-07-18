@@ -3,7 +3,6 @@ import { Fragment, useEffect, useState } from 'react';
 import { Switch, Route, Redirect } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { MDXProvider } from '@mdx-js/react';
-import { useTransition, animated, config } from 'react-spring';
 
 // Import Utilities
 import {
@@ -28,6 +27,7 @@ import Page from '../Page/Page';
 import PageNotFound from '../PageNotFound/PageNotFound';
 import Vote from '../Vote/Vote';
 import Badge from '../Badge/Badge.js';
+import StackBlitzPreview from '../StackBlitzPreview/StackBlitzPreview';
 import { default as LinkComponent } from '../mdxComponents/Link';
 import { Helmet } from 'react-helmet-async';
 
@@ -35,61 +35,32 @@ import Favicon from '../../favicon.ico';
 import Logo from '../../assets/logo-on-white-bg.svg';
 import OgImage from '../../assets/icon-pwa-512x512.png';
 
-// Import Constants
-import { THEME, THEME_LOCAL_STORAGE_KEY } from '../../constants/theme';
-
 // Load Styling
 import '../../styles/index';
 import './Site.scss';
 
 // Load Content Tree
 import Content from '../../_content.json';
-import NotifyBox from '../NotifyBox/NotifyBox';
-import { useLocalStorage } from 'react-use';
+
+import clientSideRedirections from './clientSideRedirections';
 
 const mdxComponents = {
   Badge: Badge,
+  StackBlitzPreview: StackBlitzPreview,
   a: LinkComponent,
 };
 
 Site.propTypes = {
   location: PropTypes.shape({
     pathname: PropTypes.string.isRequired,
+    hash: PropTypes.string,
   }),
+  history: PropTypes.any,
   import: PropTypes.func,
 };
 function Site(props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [list, setList] = useState([]);
-  const [wb, setWb] = useState(undefined);
-  const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useLocalStorage(
-    THEME_LOCAL_STORAGE_KEY,
-    THEME.LIGHT
-  );
 
-  const applyTheme = (theme) => {
-    document.documentElement.setAttribute('data-theme', theme);
-  };
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  const switchTheme = (theme) => {
-    setTheme(theme);
-  };
-
-  const listTransitions = useTransition(list, {
-    config: config.gentle,
-    from: { opacity: 0, transform: 'translate3d(50%, 0px, 0px)' },
-    enter: { opacity: 1, transform: 'translate3d(0%, 0px, 0px)' },
-    keys: list.map((item, index) => index),
-  });
-  const skip = () => {
-    if (!wb) return;
-    setLoading(true);
-    wb.messageSkipWaiting();
-  };
   /**
    * Toggle the mobile sidebar
    *
@@ -147,7 +118,6 @@ function Site(props) {
           // dynamic load sw
           import('workbox-window/Workbox.mjs').then(({ Workbox }) => {
             const wb = new Workbox('/sw.js');
-            setWb(wb);
 
             // listen to `waiting` event
             wb.addEventListener('waiting', () => {
@@ -156,7 +126,6 @@ function Site(props) {
                 // eslint-disable-next-line
                 "A new service worker has installed, but it can't activate until all tabs running the current version have been unloaded"
               );
-              setList([true]);
             });
 
             // register the service worker
@@ -167,7 +136,7 @@ function Site(props) {
     }
   }, []);
 
-  let { location } = props;
+  const { location, history } = props;
   let sections = extractSections(Content);
   let section = sections.find(({ url }) => location.pathname.startsWith(url));
   let pages = extractPages(Content);
@@ -197,6 +166,15 @@ function Site(props) {
   function enforceTrailingSlash(url) {
     return url.replace(/\/?$/, '/');
   }
+
+  // Enable client side redirection
+  // See https://github.com/webpack/webpack.js.org/pull/5146#discussion_r663510210
+  useEffect(() => {
+    const target = clientSideRedirections(location);
+    if (target) {
+      history.replace(target);
+    }
+  }, [location, history]);
 
   return (
     <MDXProvider components={mdxComponents}>
@@ -228,7 +206,9 @@ function Site(props) {
           <meta property="twitter:creator" content="@webpack" />
           <meta property="twitter:domain" content="https://webpack.js.org/" />
           <link rel="icon" type="image/x-icon" href={Favicon} />
-          <link rel="manifest" href="/manifest.json" />
+          {process.env.NODE_ENV === 'production' && (
+            <link rel="manifest" href="/manifest.json" />
+          )}
           <link
             rel="canonical"
             href={`https://webpack.js.org${enforceTrailingSlash(
@@ -247,20 +227,19 @@ function Site(props) {
           <meta name="msapplication-TileColor" content="#465e69" />
         </Helmet>
         <div className="site__header">
-          <NotificationBar />
           <Navigation
             pathname={location.pathname}
+            hash={location.hash}
             toggleSidebar={_toggleSidebar}
-            theme={theme}
-            switchTheme={switchTheme}
             links={[
               {
                 content: 'Documentation',
                 url: '/concepts/',
-                isActive: (url) =>
-                  /^\/(api|concepts|configuration|guides|loaders|migrate|plugins)/.test(
-                    url
-                  ),
+                isActive: (_, location) => {
+                  return /^\/(api|concepts|configuration|guides|loaders|migrate|plugins)/.test(
+                    location.pathname
+                  );
+                },
                 children: _strip(
                   sections.filter(
                     ({ name }) => excludeItems.includes(name) === false
@@ -335,11 +314,7 @@ function Site(props) {
           />
         </Switch>
         <Footer />
-        {listTransitions((styles) => (
-          <animated.div style={styles} className="notifyBox">
-            <NotifyBox skip={skip} loading={loading} />
-          </animated.div>
-        ))}
+        <NotificationBar />
       </div>
     </MDXProvider>
   );

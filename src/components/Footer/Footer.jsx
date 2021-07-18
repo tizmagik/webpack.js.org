@@ -15,11 +15,14 @@ const Footer = () => (
         <Link className="footer__link" to="/comparison/">
           Comparison
         </Link>
+        <Link className="footer__link" to="https://privacy-policy.openjsf.org/">
+          Privacy Policy
+        </Link>
       </section>
 
       <section className="footer__middle">
         <Link to="/" className="footer__icon">
-          <img src={Icon} alt="webpack icon" />
+          <img src={Icon} alt="webpack icon" width={35} height={35} />
         </Link>
       </section>
 
@@ -43,8 +46,8 @@ const Footer = () => (
           Changelog
         </Link>
         <Link className="footer__link footer__license" to="/license">
-          <img alt="Creative Commons License" src={CC} />
-          <img alt="Creative Commons License" src={BY} />
+          <img alt="Creative Commons License" src={CC} width={25} height={25} />
+          <img alt="Creative Commons License" src={BY} width={25} height={25} />
         </Link>
       </section>
     </Container>

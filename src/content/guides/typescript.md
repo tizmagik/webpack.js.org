@@ -41,7 +41,7 @@ Now we'll modify the directory structure & the configuration files:
 
 **tsconfig.json**
 
-Let's set up a simple configuration to support JSX and compile TypeScript down to ES5...
+Let's set up a configuration to support JSX and compile TypeScript down to ES5...
 
 ```json
 {
@@ -52,7 +52,7 @@ Let's set up a simple configuration to support JSX and compile TypeScript down t
     "target": "es5",
     "jsx": "react",
     "allowJs": true,
-    "moduleResolution": "node",
+    "moduleResolution": "node"
   }
 }
 ```
